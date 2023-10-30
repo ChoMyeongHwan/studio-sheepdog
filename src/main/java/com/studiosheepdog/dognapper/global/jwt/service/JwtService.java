@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -155,11 +156,17 @@ public class JwtService {
     /**
      * RefreshToken DB 저장(업데이트)
      */
+    @Transactional
     public void updateRefreshToken(String email, String refreshToken) {
         userRepository.findByEmail(email)
                 .ifPresentOrElse(
-                        user -> user.updateRefreshToken(refreshToken),
-                        () -> new Exception("일치하는 회원이 없습니다.")
+                        user -> {
+                            user.updateRefreshToken(refreshToken);
+                            userRepository.saveAndFlush(user); // 업데이트한 엔티티를 저장하고 플러시
+                        },
+                        () -> {
+                            throw new RuntimeException("일치하는 회원이 없습니다.");
+                        }
                 );
     }
 
